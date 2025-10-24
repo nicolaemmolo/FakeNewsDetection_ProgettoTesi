@@ -199,27 +199,56 @@ def data_loading():
 
 
 
-def data_by_topic(dataframes_dict):
-    # --------------------------
-    # Merge dei dataset per topic
-    # --------------------------
+def data_by_topic():
+    """
+    Organize datasets by topic
 
-    # Raggruppa i dataset per topic
-    from collections import defaultdict
-    topic_groups = defaultdict(list)
+    Returns:
+        dict: A dictionary where keys are topics and values are DataFrames containing all samples for that
+    """
 
-    for name, df in dataframes_dict.items():
-        topic = df["topic"].iloc[0]  # Assumi che il topic sia lo stesso per tutto il df
-        topic_groups[topic].append(df)
+    df_dict = data_loading()
 
-    # Crea un dataframe unito per ogni topic
-    df_by_topic = {topic: pd.concat(dfs, ignore_index=True) for topic, dfs in topic_groups.items()}
+    combined_df = pd.concat(df_dict.values(), ignore_index=True) # combine all datasets
 
-    # Ordina i topic in base alla numerosità (più frequente → meno frequente)
-    topic_counts = {topic: len(df) for topic, df in df_by_topic.items()}
-    sorted_topics = sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)
+    combined_df = combined_df.dropna(subset=['topic']) # drop rows where topic is NaN
 
-    # Ora hai una lista ordinata: [(topic, num_articoli), ...]
-    print("Topic ordinati per numero di articoli:")
-    for topic, count in sorted_topics:
-        print(f"{topic}: {count} articoli")
+    combined_df = combined_df.sort_values(by='topic').reset_index(drop=True) # sort by topic
+
+    # Create a dictionary to hold dataframes for each topic
+    df_dict_by_topic = {}
+    for topic, group in combined_df.groupby('topic'):
+        df_dict_by_topic[topic] = group
+
+    # Order datasets by topic frequency
+    topic_freq = combined_df['topic'].value_counts()
+    sorted_topics = topic_freq.index.tolist()
+    df_dict_by_topic = {topic: df_dict_by_topic[topic] for topic in sorted_topics}
+
+    return df_dict_by_topic
+
+
+
+def data_by_date():
+    """
+    Organize datasets by date
+
+    Returns:
+        dict: A dictionary where keys are years and values are DataFrames containing all samples for that
+    """
+
+    df_dict = data_loading()
+
+    combined_df = pd.concat(df_dict.values(), ignore_index=True) # combine all datasets
+
+    combined_df['date'] = pd.to_datetime(combined_df['date'], errors='coerce') # assure date format
+    combined_df = combined_df.dropna(subset=['date']) # drop rows where date is NaT
+
+    combined_df = combined_df.sort_values(by='date').reset_index(drop=True) # sort by date
+
+    # Considering only the year, create a dict of dataframes per year
+    df_dict_by_date = {}
+    for year, group in combined_df.groupby(combined_df['date'].dt.year):
+        df_dict_by_date[year] = group
+
+    return df_dict_by_date
