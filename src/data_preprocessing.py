@@ -29,10 +29,29 @@ TOPIC_POLITIFACT = "politics"
 TOPIC_UNIPI_NDF = "notredame"
 
 
-# ----------------------------
-# Load and preprocess datasets
-# ----------------------------
+def count_labels(df):
+    """
+    Count total number of samples and number of samples per label in the given dataframe.
+    
+    Args:
+        df (pd.DataFrame): DataFrame containing a 'labels' column.
+    """
+
+    # print total length
+    print("Total number of rows:", len(df))
+    # print number of 0 labels
+    print("Number of Real News:", (df['labels'] == 0).sum())
+    # print number of 1 labels
+    print("Number of Fake News:", (df['labels'] == 1).sum())
+
+
 def data_loading():
+    """
+    Preprocess and load all datasets into a dictionary of DataFrames.
+
+    Returns:
+        dict: A dictionary where keys are dataset names and values are preprocessed DataFrames.
+    """
 
     # --- CELEBRITY ---
     dfCelebrity = pd.read_csv(DATA_PATH_CELEBRITY, sep="\t", encoding="utf-8")
@@ -112,6 +131,7 @@ def data_loading():
     # texts and labels
     dfKaggleClement["texts"] = dfKaggleClement["title"].astype(str) + " " + dfKaggleClement["text"].astype(str) # merge title and text
     dfKaggleClement = dfKaggleClement[["texts", "labels"]] # keep only relevant columns
+    dfKaggleClement = dfKaggleClement.drop_duplicates(subset=['text', 'labels'])
     dfKaggleClement = dfKaggleClement.dropna(subset=["texts", "labels"]) # remove rows where texts OR labels are NaN
     # date
     dfKaggleClement['date'] = pd.to_datetime(dfKaggleClement['date'], errors='coerce') # convert date column to datetime, coerce errors to NaT
@@ -124,6 +144,7 @@ def data_loading():
     dfKaggleMeg["texts"] = dfKaggleMeg["title"].astype(str) + " " + dfKaggleMeg["text"].astype(str) # merge title and text
     dfKaggleMeg["labels"] = dfKaggleMeg["spam_score"].apply(lambda x: 1 if x > 0.5 else 0) # create binary labels based on spam_score
     dfKaggleMeg = dfKaggleMeg[["texts", "labels"]] # keep only relevant columns
+    dfKaggleMeg = dfKaggleMeg.drop_duplicates(subset=['texts', 'labels'])
     dfKaggleMeg = dfKaggleMeg.dropna(subset=["texts", "labels"]) # remove rows where texts OR labels are NaN
     # date
     dfKaggleMeg['date'] = pd.to_datetime(dfKaggleMeg['date'], errors='coerce') # convert date column to datetime, coerce errors to NaT
